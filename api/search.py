@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import openpyxl
 import requests
 import io
@@ -17,6 +18,9 @@ app.add_middleware(
 @app.post("/api/search")
 async def search_ads(file: UploadFile = File(...)):
     token = os.environ.get("META_TOKEN")
+    if not token:
+        return JSONResponse(status_code=500, content={"error": "Token de Meta no configurado en el servidor."})
+
     contents = await file.read()
     wb = openpyxl.load_workbook(io.BytesIO(contents))
     ws = wb.active
@@ -29,22 +33,40 @@ async def search_ads(file: UploadFile = File(...)):
 
         url = "https://graph.facebook.com/v19.0/ads_archive"
         params = {
-            "search_terms": name,
+            "search_terms": str(name).strip(),
             "ad_reached_countries": "ES",
             "ad_type": "ALL",
             "fields": "page_name,ad_snapshot_url,ad_delivery_start_time,ad_delivery_stop_time",
             "access_token": token,
-            "limit": 5
+            "limit": 10
         }
 
-        resp = requests.get(url, params=params)
-        data = resp.json()
+        try:
+            resp = requests.get(url, params=params, timeout=15)
+            data = resp.json()
 
-        ads = data.get("data", [])
-        results.append({
-            "name": name,
-            "has_ads": len(ads) > 0,
-            "ads": ads
-        })
+            if "error" in data:
+                results.append({
+                    "name": name,
+                    "has_ads": False,
+                    "ads": [],
+                    "error": data["error"].get("message", "Error desconocido")
+                })
+                continue
+
+            ads = data.get("data", [])
+            results.append({
+                "name": name,
+                "has_ads": len(ads) > 0,
+                "ads": ads,
+                "error": None
+            })
+        except Exception as e:
+            results.append({
+                "name": name,
+                "has_ads": False,
+                "ads": [],
+                "error": str(e)
+            })
 
     return results

@@ -13,12 +13,13 @@
     th { background: #f0f2f5; }
     .yes { color: green; font-weight: bold; }
     .no { color: #999; }
+    .error { color: red; font-size: 0.9em; }
     a { color: #1877f2; }
   </style>
 </head>
 <body>
   <h1>📢 Ads Finder</h1>
-  <p>Sube un Excel con una columna <strong>nombre</strong> en la primera fila.</p>
+  <p>Sube un Excel con una columna <strong>nombre</strong> (nombre de la página de Facebook).</p>
 
   <input type="file" id="fileInput" accept=".xlsx" />
   <button onclick="buscar()">Buscar anuncios</button>
@@ -45,27 +46,43 @@
       const formData = new FormData();
       formData.append('file', file);
 
-      const resp = await fetch('/api/search', { method: 'POST', body: formData });
-      const data = await resp.json();
+      try {
+        const resp = await fetch('/api/search', { method: 'POST', body: formData });
 
-      const tbody = document.getElementById('tbody');
-      tbody.innerHTML = '';
+        if (!resp.ok) {
+          const err = await resp.json();
+          document.getElementById('status').innerHTML = `<span class="error">Error: ${err.error || 'Fallo en el servidor'}</span>`;
+          return;
+        }
 
-      data.forEach(item => {
-        const links = item.ads.map(ad =>
-          `<a href="${ad.ad_snapshot_url}" target="_blank">Ver anuncio</a>`
-        ).join('<br>');
+        const data = await resp.json();
+        const tbody = document.getElementById('tbody');
+        tbody.innerHTML = '';
 
-        tbody.innerHTML += `
-          <tr>
-            <td>${item.name}</td>
-            <td class="${item.has_ads ? 'yes' : 'no'}">${item.has_ads ? '✅ Sí' : '❌ No'}</td>
-            <td>${links || '-'}</td>
-          </tr>`;
-      });
+        data.forEach(item => {
+          let linksHtml = '-';
 
-      document.getElementById('results').style.display = 'table';
-      document.getElementById('status').innerText = `${data.length} perfiles analizados.`;
+          if (item.error) {
+            linksHtml = `<span class="error">${item.error}</span>`;
+          } else if (item.ads.length > 0) {
+            linksHtml = item.ads.map(ad =>
+              `<a href="${ad.ad_snapshot_url}" target="_blank">${ad.page_name || 'Ver anuncio'}</a>`
+            ).join('<br>');
+          }
+
+          tbody.innerHTML += `
+            <tr>
+              <td>${item.name}</td>
+              <td class="${item.has_ads ? 'yes' : 'no'}">${item.has_ads ? '✅ Sí' : '❌ No'}</td>
+              <td>${linksHtml}</td>
+            </tr>`;
+        });
+
+        document.getElementById('results').style.display = 'table';
+        document.getElementById('status').innerText = `${data.length} perfiles analizados.`;
+      } catch (e) {
+        document.getElementById('status').innerHTML = `<span class="error">Error de conexión: ${e.message}</span>`;
+      }
     }
   </script>
 </body>
