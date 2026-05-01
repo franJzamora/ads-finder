@@ -1,8 +1,9 @@
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 import openpyxl
 import requests
 import io
+import os
 
 app = FastAPI()
 
@@ -14,7 +15,8 @@ app.add_middleware(
 )
 
 @app.post("/api/search")
-async def search_ads(file: UploadFile = File(...), token: str = Form(...)):
+async def search_ads(file: UploadFile = File(...)):
+    token = os.environ.get("META_TOKEN")
     contents = await file.read()
     wb = openpyxl.load_workbook(io.BytesIO(contents))
     ws = wb.active

@@ -21,7 +21,6 @@
   <p>Sube un Excel con una columna <strong>nombre</strong> en la primera fila.</p>
 
   <input type="file" id="fileInput" accept=".xlsx" />
-  <input type="text" id="tokenInput" placeholder="EAAFLWJSNBZA8BRctcH31mQ3iER5G8jGoDrZBE0DZAmNGEXZB8KgqXONzq0qPITgOeR4pw01U99zEIlKwZCeVQUz8x7X4WFqu93dPQSu92m1ttZCWbKZCj1jbp4XK698socdRfsISbMgasodz6B7fZBPxZAUZAE6P9pqDwDKU8cnDq8wqq3fr1Y7klqI9hSzmZBgm8GZCizpLZBuFZAs0crfhSaD2ED1G7kgcvHvhJHR2MDEyJ8ZAgOkVbBTWWJbiTjeprPqsKONRhkCAPkY4NjKnDEufEh1FD77W6IJmY3N0jGZBVl9eankU2nLvmEL1xk9ARNGYNxD9BBE10krhVAZDZD" style="width:300px" />
   <button onclick="buscar()">Buscar anuncios</button>
 
   <div id="status"></div>
@@ -35,10 +34,9 @@
   <script>
     async function buscar() {
       const file = document.getElementById('fileInput').files[0];
-      const token = document.getElementById('tokenInput').value.trim();
 
-      if (!file || !token) {
-        alert('Sube el Excel y mete el token');
+      if (!file) {
+        alert('Sube el Excel primero');
         return;
       }
 
@@ -46,7 +44,6 @@
 
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('token', token);
 
       const resp = await fetch('/api/search', { method: 'POST', body: formData });
       const data = await resp.json();
