@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ads Finder</title>
+  <style>
+    body { font-family: sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; }
+    h1 { color: #1877f2; }
+    input, button { padding: 8px 12px; margin: 8px 4px; }
+    button { background: #1877f2; color: white; border: none; cursor: pointer; border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background: #f0f2f5; }
+    .yes { color: green; font-weight: bold; }
+    .no { color: #999; }
+    a { color: #1877f2; }
+  </style>
+</head>
+<body>
+  <h1>📢 Ads Finder</h1>
+  <p>Sube un Excel con una columna <strong>nombre</strong> en la primera fila.</p>
+
+  <input type="file" id="fileInput" accept=".xlsx" />
+  <input type="text" id="tokenInput" placeholder="Tu token de Meta" style="width:300px" />
+  <button onclick="buscar()">Buscar anuncios</button>
+
+  <div id="status"></div>
+  <table id="results" style="display:none">
+    <thead>
+      <tr><th>Nombre</th><th>¿Tiene anuncios?</th><th>Links</th></tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+
+  <script>
+    async function buscar() {
+      const file = document.getElementById('fileInput').files[0];
+      const token = document.getElementById('tokenInput').value.trim();
+
+      if (!file || !token) {
+        alert('Sube el Excel y mete el token');
+        return;
+      }
+
+      document.getElementById('status').innerText = 'Buscando...';
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('token', token);
+
+      const resp = await fetch('/api/search', { method: 'POST', body: formData });
+      const data = await resp.json();
+
+      const tbody = document.getElementById('tbody');
+      tbody.innerHTML = '';
+
+      data.forEach(item => {
+        const links = item.ads.map(ad =>
+          `<a href="${ad.ad_snapshot_url}" target="_blank">Ver anuncio</a>`
+        ).join('<br>');
+
+        tbody.innerHTML += `
+          <tr>
+            <td>${item.name}</td>
+            <td class="${item.has_ads ? 'yes' : 'no'}">${item.has_ads ? '✅ Sí' : '❌ No'}</td>
+            <td>${links || '-'}</td>
+          </tr>`;
+      });
+
+      document.getElementById('results').style.display = 'table';
+      document.getElementById('status').innerText = `${data.length} perfiles analizados.`;
+    }
+  </script>
+</body>
+</html>
